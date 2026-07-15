@@ -1,0 +1,33 @@
+# Alice Johnson
+## Senior Python Developer
+alice.johnson@example.com | +1-555-0101 | San Francisco, CA
+
+### Summary
+Senior Python developer with 6 years of experience building scalable web applications and REST APIs. Passionate about clean code, test-driven development, and mentoring junior engineers.
+
+### Skills
+Python, Django, FastAPI, REST API, GraphQL, PostgreSQL, Docker, AWS (EC2, S3, Lambda), CI/CD, Git, Linux, Agile, Scrum
+
+### Experience
+
+**Senior Backend Engineer** — TechCorp Inc. (2021-Present)
+- Led migration of monolithic Django app to microservices architecture
+- Designed and implemented GraphQL API serving 10M+ requests/day
+- Reduced deployment time by 60% with Docker + GitHub Actions CI/CD
+- Mentored 3 junior developers
+
+**Python Developer** — StartupXYZ (2018-2021)
+- Built RESTful APIs using Django REST Framework
+- Optimized PostgreSQL queries reducing page load by 40%
+- Implemented AWS Lambda functions for background task processing
+
+### Education
+**MSc Computer Science** — Stanford University (2016-2018)
+**BSc Computer Science** — UC Berkeley (2012-2016)
+
+### Certifications
+- AWS Certified Developer — Associate
+- Certified Kubernetes Administrator (CKA)
+
+### Languages
+English (Native), Spanish (Professional)
