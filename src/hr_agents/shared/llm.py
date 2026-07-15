@@ -37,8 +37,8 @@ class LLMClient:
             return self._mock_invoke(prompt, system_prompt)
         if self.provider == "openai":
             return self._openai_invoke(prompt, system_prompt, **kwargs)
-        if self.provider == "ollama":
-            return self._ollama_invoke(prompt, system_prompt, **kwargs)
+        if self.provider in ("openrouter", "ollama"):
+            return self._openrouter_invoke(prompt, system_prompt, **kwargs)
         msg = f"Unknown LLM provider: {self.provider}"
         raise ValueError(msg)
 
@@ -144,26 +144,31 @@ class LLMClient:
         )
         return response.choices[0].message.content or ""
 
-    def _ollama_invoke(
+    def _openrouter_invoke(
         self, prompt: str, system_prompt: str | None = None, **kwargs: Any
     ) -> str:
-        import requests
+        """Call an OpenAI-compatible endpoint (OpenRouter, Ollama, etc.)."""
+        try:
+            from openai import OpenAI
+        except ImportError:
+            raise ImportError("openai package not installed. Run: pip install openai")
 
-        payload: dict[str, Any] = {
-            "model": self.model,
-            "prompt": prompt,
-            "stream": False,
-        }
-        if system_prompt:
-            payload["system"] = system_prompt
-
-        resp = requests.post(
-            f"{self.base_url}/api/generate",
-            json=payload,
-            timeout=kwargs.get("timeout", 60),
+        client = OpenAI(
+            api_key=self.api_key or "sk-placeholder",
+            base_url=self.base_url.rstrip("/") + "/v1" if not self.base_url.endswith("/v1") else self.base_url,
         )
-        resp.raise_for_status()
-        return resp.json().get("response", "")
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        response = client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=kwargs.get("temperature", 0.3),
+            max_tokens=kwargs.get("max_tokens", 2048),
+        )
+        return response.choices[0].message.content or ""
 
 
 # Module-level singleton for convenience

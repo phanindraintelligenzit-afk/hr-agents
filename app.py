@@ -205,9 +205,12 @@ with st.sidebar:
             os.environ["OPENAI_API_KEY"] = api_key
     elif llm_provider == "openrouter (DeepSeek)":
         openrouter_key = st.text_input("OpenRouter API Key", type="password", value="sk-or-v1-...")
-        st.caption("Uses deepseek/deepseek-v4-flash for smarter JD parsing and candidate scoring")
+        st.caption("Uses deepseek/deepseek-v4-flash for genuine AI-powered resume screening")
         if openrouter_key and openrouter_key != "sk-or-v1-...":
             os.environ["OPENROUTER_API_KEY"] = openrouter_key
+            st.success("✅ OpenRouter key saved")
+        elif openrouter_key == "sk-or-v1-...":
+            st.warning("Paste your actual OpenRouter API key starting with sk-or-v1-...")
     else:
         st.info("Using mock LLM — scores are rule-based. Switch to OpenRouter for AI-enhanced scoring.")
 
@@ -333,12 +336,12 @@ if screen_clicked:
     llm = None
     if st.session_state.llm_provider == "openrouter (DeepSeek)":
         or_key = os.environ.get("OPENROUTER_API_KEY", "")
-        if or_key:
+        if or_key and or_key != "sk-or-v1-...":
             llm = LLMClient(
-                provider="openai",
+                provider="openrouter",
                 model="deepseek/deepseek-v4-flash",
                 api_key=or_key,
-                base_url="https://openrouter.ai/api/v1"
+                base_url="https://openrouter.ai/api/v1",
             )
     if llm is None:
         llm = LLMClient(provider=st.session_state.llm_provider)
@@ -418,6 +421,8 @@ if screen_clicked:
             df[col] = df[col].apply(lambda x: f"{x*100:.0f}%")
 
         st.session_state.results = df
+        st.session_state._raw_scores = scores
+        st.session_state._candidates = candidates
         status.update(label="✅ Screening Complete!", state="complete")
 
     st.rerun()
@@ -496,6 +501,25 @@ if st.session_state.results is not None and not st.session_state.results.empty:
             display_score_bar(val, label, weight)
 
         st.markdown("</div>", unsafe_allow_html=True)
+
+        # LLM Reasoning (if available)
+        reasoning = None
+        for s in st.session_state.get("_raw_scores", []):
+            if s.get("name") == selected and s.get("llm_reasoning"):
+                reasoning = s.get("llm_reasoning")
+                break
+
+        if reasoning and reasoning.get("summary") and "no LLM" not in reasoning.get("summary", "").lower():
+            st.markdown("### 🧠 AI Analysis")
+            with st.expander("View LLM reasoning", expanded=True):
+                for dim_key, dim_label in [("skills_match", "Skills"), ("experience_level", "Experience"),
+                                           ("education", "Education"), ("certifications", "Certifications"),
+                                           ("location_fit", "Location"), ("communication", "Communication")]:
+                    if reasoning.get(dim_key):
+                        st.markdown(f"**{dim_label}:** {reasoning[dim_key]}")
+                st.markdown(f"**Summary:** {reasoning.get('summary', '')}")
+        elif reasoning and "rule-based" in reasoning.get("summary", "").lower():
+            st.info("Rule-based scoring only. Switch to **OpenRouter (DeepSeek)** in the sidebar for AI-powered analysis.")
 
         # Suggested interview
         if "Shortlisted" in row["Status"]:
