@@ -192,18 +192,24 @@ with st.sidebar:
     st.markdown("### ⚙️ Settings")
     llm_provider = st.selectbox(
         "LLM Provider",
-        options=["mock", "openai"],
+        options=["mock", "openai", "openrouter (DeepSeek)"],
         index=0,
-        help="'mock' works offline (no API key needed). 'openai' uses your OpenAI key for smarter scoring."
+        help="'mock' works offline. 'openrouter' uses our DeepSeek model for AI scoring."
     )
     st.session_state.llm_provider = llm_provider
 
+    openrouter_key = None
     if llm_provider == "openai":
         api_key = st.text_input("OpenAI API Key", type="password")
         if api_key:
             os.environ["OPENAI_API_KEY"] = api_key
+    elif llm_provider == "openrouter (DeepSeek)":
+        openrouter_key = st.text_input("OpenRouter API Key", type="password", value="sk-or-v1-...")
+        st.caption("Uses deepseek/deepseek-v4-flash for smarter JD parsing and candidate scoring")
+        if openrouter_key and openrouter_key != "sk-or-v1-...":
+            os.environ["OPENROUTER_API_KEY"] = openrouter_key
     else:
-        st.info("Using mock LLM — scores are rule-based. Switch to OpenAI for AI-enhanced scoring.")
+        st.info("Using mock LLM — scores are rule-based. Switch to OpenRouter for AI-enhanced scoring.")
 
     st.divider()
     st.markdown("### 📖 How to Use")
@@ -216,7 +222,7 @@ with st.sidebar:
 
     st.divider()
     st.markdown("### 💾 Quick Actions")
-    if st.session_state.results:
+    if st.session_state.results is not None and not st.session_state.results.empty:
         df = st.session_state.results
         csv = df.to_csv(index=False).encode()
         st.download_button("📥 Download CSV", csv, "candidates_scores.csv", "text/csv")
@@ -324,7 +330,18 @@ if screen_clicked:
         st.error("Please enter a job description.")
         st.stop()
 
-    llm = LLMClient(provider=st.session_state.llm_provider)
+    llm = None
+    if st.session_state.llm_provider == "openrouter (DeepSeek)":
+        or_key = os.environ.get("OPENROUTER_API_KEY", "")
+        if or_key:
+            llm = LLMClient(
+                provider="openai",
+                model="deepseek/deepseek-v4-flash",
+                api_key=or_key,
+                base_url="https://openrouter.ai/api/v1"
+            )
+    if llm is None:
+        llm = LLMClient(provider=st.session_state.llm_provider)
 
     with st.status("📡 Processing...", expanded=True) as status:
         # Step 1: Parse JD
@@ -407,7 +424,7 @@ if screen_clicked:
 
 
 # ── Display Results ──
-if st.session_state.results:
+if st.session_state.results is not None and not st.session_state.results.empty:
     df = st.session_state.results
 
     # Summary metrics
